@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2025 Rafael Costa. All rights reserved.</string>
+	<key>NSSupportsAutomaticTermination</key>
+	<false/>
+	<key>NSSupportsSuddenTermination</key>
+	<false/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Photocopy needs to send Apple Events to simulate paste commands when you select clipboard items.</string>
+	<key>NSSystemAdministrationUsageDescription</key>
+	<string>Photocopy needs accessibility permissions to register global hotkeys (⌘⇧V) and monitor clipboard changes for the clipboard history feature.</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>CFBundleIconFile</key>
+	<string>Photocopier_1024</string>
+	<key>SUPublicEDKey</key>
+	<string>ZKznw0lWFNV/VytN/pXeKL8QkKyodJTrXeHFsAmpSoU=</string>
+	<key>SUFeedURL</key>
+	<string>https://updates.cos.tax/me.rafaelcosta.Photocopy/appcast.xml</string>
+	<key>OSLogPreferences</key>
+	<dict>
+		<key>com.photocopy.app</key>
+		<dict>
+			<key>app</key>
+			<dict>
+				<key>Enable-Private-Data</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>
