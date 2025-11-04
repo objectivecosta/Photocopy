@@ -1,0 +1,22 @@
+{
+  "pythonVersion": "3.11",
+  "architecture": "arm64",
+  "binaryPath": "photocopier",
+  "modelsPath": "models",
+  "libPath": "lib",
+  "maxImageSize": "50MB",
+  "timeout": 60,
+  "supportedFormats": ["png", "jpg", "jpeg", "tiff", "bmp", "webp"],
+  "model": {
+    "name": "moondream2",
+    "repository": "vikhyatk/moondream2",
+    "trustRemoteCode": true,
+    "device": "mps"
+  },
+  "generationSettings": {
+    "temperature": 0.5,
+    "maxTokens": 768,
+    "topP": 0.3,
+    "length": "short"
+  }
+}

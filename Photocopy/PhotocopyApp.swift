@@ -17,6 +17,7 @@ struct PhotocopyApp: App {
     @StateObject private var overlayManager = OverlayWindowManager.shared
     @StateObject private var settingsManager = SettingsManager.shared
     @StateObject private var menuBarManager = MenuBarManager.shared
+    @StateObject private var pythonMLManager = PythonMLManager.shared
     @State private var showOnboarding = true
     
     // Logging
@@ -100,6 +101,11 @@ struct PhotocopyApp: App {
             settingsManager.setAutoLaunch(enabled: true)
         }
         
+        // Initialize Python ML service
+        Task {
+            await initializePythonMLService()
+        }
+
         // Generate ML classifications for existing images
         Task {
             await generateMLClassificationsOnLaunch()
@@ -109,6 +115,7 @@ struct PhotocopyApp: App {
         logger.info("📋 Clipboard monitoring: \(clipboardManager.isMonitoring)")
         logger.info("⌨️ Hotkey registered: \(hotkeyManager.isHotkeyRegistered)")
         logger.info("📱 Menu bar set up")
+        logger.info("🐍 Python ML service initialized: \(pythonMLManager.isModelLoaded)")
     }
     
     private func checkIfShouldShowOnboarding() {
@@ -123,6 +130,36 @@ struct PhotocopyApp: App {
         
         // Mark that the app has been launched
         UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+    }
+
+    // MARK: - Python ML Service Initialization
+
+    @MainActor
+    private func initializePythonMLService() async {
+        logger.info("🐍 Initializing Python ML service...")
+
+        // Check if AI insights are enabled in settings
+        guard settingsManager.enableAIInsights else {
+            logger.info("🤖 AI Insights are disabled in settings - skipping Python ML initialization")
+            return
+        }
+
+        do {
+            let isHealthy = await pythonMLManager.performHealthCheck()
+
+            if isHealthy {
+                logger.info("✅ Python ML service initialized successfully")
+                logger.info("🐍 Model loaded: \(pythonMLManager.isModelLoaded)")
+            } else {
+                logger.warning("⚠️ Python ML service health check failed")
+                if let error = pythonMLManager.lastError {
+                    logger.error("❌ Python ML service error: \(error)")
+                }
+            }
+
+        } catch {
+            logger.error("❌ Failed to initialize Python ML service: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - ML Classification Generation

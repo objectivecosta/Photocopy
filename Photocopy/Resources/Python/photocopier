@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Photocopy ML Service Launcher
+# Sets up the environment and runs the Python script
+
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Python.xcframework path (relative to app bundle)
+PYTHON_FRAMEWORK_DIR="$(dirname "$SCRIPT_DIR")/Frameworks/Python.xcframework/macos-arm64_x86_64/Python.framework"
+
+# Set PYTHONHOME to use embedded Python framework
+export PYTHONHOME="$PYTHON_FRAMEWORK_DIR"
+export PYTHONPATH="$SCRIPT_DIR/lib:$PYTHONHOME/lib/python3.11:$PYTHONPATH"
+
+# Run the Python script using embedded Python
+exec "$PYTHON_FRAMEWORK_DIR/bin/python3" "$SCRIPT_DIR/photocopier.py" "$@"

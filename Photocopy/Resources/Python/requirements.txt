@@ -1,0 +1,5 @@
+# ML dependencies for arm64 macOS
+transformers>=4.51.1
+torch>=2.7.0
+accelerate>=1.10.0
+Pillow>=11.0.0

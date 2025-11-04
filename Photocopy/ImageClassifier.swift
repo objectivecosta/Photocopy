@@ -8,15 +8,26 @@
 import Vision
 import VisionKit
 import SwiftData
+import os.log
 
 @available(macOS 15.0, *)
 final class ImageClassifier {
     
     struct ImageVisionData {
         var observations: [String: VNConfidence] = [:]
+        var pythonAnalysis: String? = nil
+        var pythonAnalysisModel: String? = nil
+        var pythonTags: [String]? = nil
+        var pythonAnalysisData: PythonAnalysisData? = nil
     }
     
     static let shared = ImageClassifier()
+
+    // Python ML Manager
+    private let pythonMLManager = PythonMLManager.shared
+
+    // Logging
+    private let logger = Logger(subsystem: "com.photocopy.app", category: "ImageClassifier")
     
     func classifyImageOnDiskItem(clipboardItem: ClipboardItem) async throws -> ImageVisionData {
         guard case let .imageOnDisk(imagePath, _) = clipboardItem.content else {
@@ -138,6 +149,148 @@ final class ImageClassifier {
             }
         }
 
+        return results
+    }
+
+    // MARK: - Python ML Analysis Methods
+
+    private func analyzeImageWithPython(imagePath: String) async -> (analysis: String?, tags: [String]?, analysisData: PythonAnalysisData?) {
+        logger.info("Starting Python ML analysis for image: \(imagePath)")
+
+        do {
+            let response = await pythonMLManager.analyzeImageWithResponse(imagePath)
+
+            if let response = response {
+                logger.info("Python ML analysis completed successfully")
+                logger.info("Analysis result: \(response.caption?.prefix(100) ?? "No caption")...")
+                if let tags = response.tags {
+                    logger.info("Generated tags: \(tags.joined(separator: ", "))")
+                }
+                return (response.caption, response.tags, response.analysis)
+            } else {
+                logger.warning("Python ML analysis returned nil")
+                return (nil, nil, nil)
+            }
+
+        } catch {
+            logger.error("Python ML analysis failed: \(error.localizedDescription)")
+            return (nil, nil, nil)
+        }
+    }
+
+    func classifyImageOnDiskItemWithPython(clipboardItem: ClipboardItem) async throws -> ImageVisionData {
+        guard case let .imageOnDisk(imagePath, _) = clipboardItem.content else {
+            return ImageVisionData()
+        }
+
+        var imageVisionData = ImageVisionData()
+
+        // Perform Python ML analysis
+        let (analysis, tags, analysisData) = await analyzeImageWithPython(imagePath: imagePath)
+        imageVisionData.pythonAnalysis = analysis
+        imageVisionData.pythonTags = tags
+        imageVisionData.pythonAnalysisData = analysisData
+        imageVisionData.pythonAnalysisModel = "moondream2"
+
+        return imageVisionData
+    }
+
+    func classifyImageInMemoryItemWithPython(clipboardItem: ClipboardItem) async throws -> ImageVisionData {
+        guard case let .imageInMemory(data, _) = clipboardItem.content else {
+            return ImageVisionData()
+        }
+
+        // Create temporary file for in-memory image
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempFile = tempDir.appendingPathComponent("temp_image_\(UUID().uuidString).jpg")
+
+        do {
+            // Write image data to temporary file
+            try data.write(to: tempFile)
+
+            // Perform Python ML analysis
+            var imageVisionData = ImageVisionData()
+            let (analysis, tags, analysisData) = await analyzeImageWithPython(imagePath: tempFile.path)
+            imageVisionData.pythonAnalysis = analysis
+            imageVisionData.pythonTags = tags
+            imageVisionData.pythonAnalysisData = analysisData
+            imageVisionData.pythonAnalysisModel = "moondream2"
+
+            // Clean up temporary file
+            try? FileManager.default.removeItem(at: tempFile)
+
+            return imageVisionData
+
+        } catch {
+            logger.error("Failed to process in-memory image with Python ML: \(error.localizedDescription)")
+            // Clean up temporary file on error
+            try? FileManager.default.removeItem(at: tempFile)
+            return ImageVisionData()
+        }
+    }
+
+    func classifyItemOnDemandWithPython(_ clipboardItem: ClipboardItem) async throws -> ImageVisionData? {
+        // Check if AI insights are enabled in settings
+        guard await SettingsManager.shared.enableAIInsights else {
+            return nil
+        }
+
+        // Only classify images
+        guard clipboardItem.content.type == .image else {
+            return nil
+        }
+
+        // Check if Python ML is available
+        guard await pythonMLManager.performHealthCheck() else {
+            logger.warning("Python ML service health check failed - skipping Python analysis")
+            return nil
+        }
+
+        // Perform classification based on storage type
+        switch clipboardItem.content {
+        case .imageOnDisk:
+            return try await classifyImageOnDiskItemWithPython(clipboardItem: clipboardItem)
+        case .imageInMemory:
+            return try await classifyImageInMemoryItemWithPython(clipboardItem: clipboardItem)
+        default:
+            return nil
+        }
+    }
+
+    func batchClassifyItemsWithPython(
+        _ items: [ClipboardItem],
+        progressHandler: ((Int, Int) async -> Void)? = nil
+    ) async throws -> [ImageVisionData] {
+        let imageItems = items.filter { item in
+            if item.content.type == .image { return true }
+            return false
+        }
+
+        var results: [ImageVisionData] = []
+        var processedCount = 0
+
+        // Check if Python ML is available
+        guard await pythonMLManager.performHealthCheck() else {
+            logger.warning("Python ML service not available - skipping batch Python classification")
+            return results
+        }
+
+        for item in imageItems {
+            if let classification = try await classifyItemOnDemandWithPython(item) {
+                results.append(classification)
+            }
+            processedCount += 1
+
+            // Report progress
+            if let progressHandler = progressHandler {
+                await progressHandler(processedCount, imageItems.count)
+            }
+
+            // Add small delay to prevent overwhelming the system
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+
+        logger.info("✅ Batch Python classification completed. Processed \(results.count) images.")
         return results
     }
 }
