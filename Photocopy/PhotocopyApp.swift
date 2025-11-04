@@ -12,12 +12,7 @@ import os.log
 @main
 struct PhotocopyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var clipboardManager = ClipboardManager()
-    @StateObject private var hotkeyManager = HotkeyManager()
-    @StateObject private var menuBarManager = MenuBarManager()
-    @StateObject private var overlayManager = OverlayWindowManager.shared
-    @StateObject private var settingsManager = SettingsManager.shared
-    @State private var showOnboarding = true
+    private var appController: AppController = AppController()
     
     // Logging
     private let logger = Logger(subsystem: "com.photocopy.app", category: "PhotocopyApp")
@@ -71,99 +66,42 @@ struct PhotocopyApp: App {
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .modelContainer(sharedModelContainer)
+        .environmentObject(appController.clipboardManager)
+        .environmentObject(appController.hotkeyManager)
+        .environmentObject(appController.menuBarManager)
+        .environmentObject(appController.overlayManager)
+        .environmentObject(appController.settingsManager)
     }
     
     private func setupApp() {
         // Configure clipboard manager with model context
         let modelContext = sharedModelContainer.mainContext
         modelContext.autosaveEnabled = true
-        clipboardManager.configure(with: modelContext)
+        appController.clipboardManager.configure(with: modelContext)
         
         // Set up hotkey handler
-        hotkeyManager.onHotkeyPressed = {
-            overlayManager.toggleOverlay()
+        appController.hotkeyManager.onHotkeyPressed = {
+            appController.overlayManager.toggleOverlay()
         }
         
         // Set up menu bar
-        menuBarManager.checkForUpdatesClosure = {
+        appController.menuBarManager.checkForUpdatesClosure = {
             appDelegate.checkForUpdates()
         }
-        menuBarManager.setupMenuBar()
+        appController.menuBarManager.setupMenuBar()
         
         // Start services
-        clipboardManager.startMonitoring()
-        hotkeyManager.registerGlobalHotkey()
+        appController.clipboardManager.startMonitoring()
+        appController.hotkeyManager.registerGlobalHotkey()
         
         // Set up auto-launch if enabled
-        if settingsManager.autoLaunchOnStartup {
-            settingsManager.setAutoLaunch(enabled: true)
-        }
-        
-        // Generate ML classifications for existing images
-        Task {
-            await generateMLClassificationsOnLaunch()
+        if appController.settingsManager.autoLaunchOnStartup {
+            appController.settingsManager.setAutoLaunch(enabled: true)
         }
 
         logger.info("🚀 Photocopy app initialized")
-        logger.info("📋 Clipboard monitoring: \(clipboardManager.isMonitoring)")
-        logger.info("⌨️ Hotkey registered: \(hotkeyManager.isHotkeyRegistered)")
+        logger.info("📋 Clipboard monitoring: \(appController.clipboardManager.isMonitoring)")
+        logger.info("⌨️ Hotkey registered: \(appController.hotkeyManager.isHotkeyRegistered)")
         logger.info("📱 Menu bar set up")
-    }
-    
-    // MARK: - ML Classification Generation
-
-    @MainActor
-    private func generateMLClassificationsOnLaunch() async {
-        guard #available(macOS 15.0, *) else {
-            logger.info("🤖 ML classification requires macOS 15.0+ - skipping")
-            return
-        }
-
-        // Check if AI insights are enabled in settings
-        guard settingsManager.enableAIInsights else {
-            logger.info("🤖 AI Insights are disabled in settings - skipping ML classification")
-            return
-        }
-
-        logger.info("🤖 Starting ML classification generation for existing images...")
-
-        let startTime = Date()
-
-        do {
-            // Get all clipboard items and filter for images stored on disk
-            let descriptor = FetchDescriptor<ClipboardItem>()
-            let allItems = try sharedModelContainer.mainContext.fetch(descriptor)
-            let diskImageItems = allItems.filter { item in
-                if case .imageOnDisk = item.content { return true }
-                return false
-            }
-
-            if diskImageItems.isEmpty {
-                logger.info("🤖 No disk images found for ML classification")
-                return
-            }
-
-            logger.info("🤖 Found \(diskImageItems.count) images on disk for ML classification")
-
-            // Batch classify images with progress reporting
-            let classifications = try await ImageClassifier.shared.batchClassifyItems(diskImageItems) { processed, total in
-                let progress = Double(processed) / Double(total)
-                logger.info("🤖 ML classification progress: \(processed)/\(total) (\(String(format: "%.1f", progress * 100))%)")
-            }
-
-            let duration = Date().timeIntervalSince(startTime)
-            logger.info("🤖 ML classification completed in \(String(format: "%.2f", duration))s")
-            logger.info("🤖 Generated \(classifications.count) classifications")
-
-            // Log top classifications for debugging
-            for classification in classifications.prefix(5) {
-                if let topClassification = classification.observations.max(by: { $0.value < $1.value }) {
-                    logger.info("🤖 Item: \(topClassification.key) (\(String(format: "%.2f", topClassification.value)))")
-                }
-            }
-
-        } catch {
-            logger.error("❌ Failed to generate ML classifications: \(error.localizedDescription)")
-        }
     }
 }

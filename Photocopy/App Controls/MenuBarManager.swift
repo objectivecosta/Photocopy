@@ -3,10 +3,18 @@ import AppKit
 
 @MainActor
 class MenuBarManager: ObservableObject {
+    private let overlayWindowManager: OverlayWindowManager
+    private let settingsManager: SettingsManager
+    
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var settingsWindow: NSWindow?
     var checkForUpdatesClosure: (() -> Void)?
+    
+    init(overlayWindowManager: OverlayWindowManager, settingsManager: SettingsManager) {
+        self.overlayWindowManager = overlayWindowManager
+        self.settingsManager = settingsManager
+    }
     
     func setupMenuBar() {
         // Create status item
@@ -56,7 +64,8 @@ class MenuBarManager: ObservableObject {
             statusItem?.menu?.popUp(positioning: nil, at: NSPoint.zero, in: statusItem?.button)
         } else {
             // Left click - toggle overlay
-            OverlayWindowManager.shared.toggleOverlay()
+            
+            overlayWindowManager.toggleOverlay()
         }
     }
     
@@ -67,7 +76,7 @@ class MenuBarManager: ObservableObject {
     
     private func createSettingsWindow() {
         let settingsView = SettingsView()
-            .environmentObject(SettingsManager.shared)
+            .environmentObject(settingsManager)
             .frame(minWidth: 500, minHeight: 400)
         let hostingController = NSHostingController(rootView: settingsView)
         

@@ -9,24 +9,71 @@ import Vision
 import VisionKit
 import SwiftData
 
-@available(macOS 15.0, *)
-final class ImageClassifier {
+struct VisionClassifications {
+    var observations: [String: VNConfidence] = [:]
+}
+
+protocol ImageClassifier {
+    func classifyImageOnDiskItem(clipboardItem: ClipboardItem) async throws -> VisionClassifications
     
-    struct ImageVisionData {
-        var observations: [String: VNConfidence] = [:]
+    func classifyImageItem(clipboardItem: ClipboardItem) async throws -> VisionClassifications
+    
+    func classifyItemOnDemand(_ clipboardItem: ClipboardItem) async throws -> VisionClassifications?
+    
+    func batchClassifyItems(
+        _ items: [ClipboardItem],
+        progressHandler: ((Int, Int) async -> Void)?
+    ) async throws -> [VisionClassifications]
+    
+    func getClassificationsForItems(_ items: [ClipboardItem]) async throws -> [UUID: VisionClassifications]
+}
+
+final class NoOpImageClassifier: ImageClassifier, ObservableObject {
+    func classifyImageOnDiskItem(clipboardItem: ClipboardItem) async throws -> VisionClassifications {
+        VisionClassifications()
     }
     
-    static let shared = ImageClassifier()
+    func classifyImageItem(clipboardItem: ClipboardItem) async throws -> VisionClassifications {
+        VisionClassifications()
+    }
+
+    func classifyItemOnDemand(_ clipboardItem: ClipboardItem) async throws -> VisionClassifications? {
+        nil
+    }
+
+    func batchClassifyItems(
+        _ items: [ClipboardItem],
+        progressHandler: ((Int, Int) async -> Void)? = nil
+    ) async throws -> [VisionClassifications] {
+        // No-op implementation: report 0/0 once if a handler is provided
+        if let progressHandler = progressHandler {
+            await progressHandler(0, 0)
+        }
+        return []
+    }
+
+    func getClassificationsForItems(_ items: [ClipboardItem]) async throws -> [UUID: VisionClassifications] {
+        [:]
+    }
+}
+
+@available(macOS 15.0, *)
+final class ImageClassifierImpl: ImageClassifier, ObservableObject {
+    private let settingsManager: SettingsManager
     
-    func classifyImageOnDiskItem(clipboardItem: ClipboardItem) async throws -> ImageVisionData {
+    init(settingsManager: SettingsManager) {
+        self.settingsManager = settingsManager
+    }
+        
+    func classifyImageOnDiskItem(clipboardItem: ClipboardItem) async throws -> VisionClassifications {
         guard case let .imageOnDisk(imagePath, _) = clipboardItem.content else {
-            return ImageVisionData()
+            return VisionClassifications()
         }
         
         let url = URL(fileURLWithPath: imagePath)
 
         let data = try Data(contentsOf: url)
-        var image = ImageVisionData()
+        var image = VisionClassifications()
 
         // Vision request to classify an image.
         let request = ClassifyImageRequest()
@@ -51,12 +98,12 @@ final class ImageClassifier {
         return image
     }
     
-    func classifyImageItem(clipboardItem: ClipboardItem) async throws -> ImageVisionData {
+    func classifyImageItem(clipboardItem: ClipboardItem) async throws -> VisionClassifications {
         guard case let .imageInMemory(data, _) = clipboardItem.content else {
-            return ImageVisionData()
+            return VisionClassifications()
         }
 
-        var image = ImageVisionData()
+        var image = VisionClassifications()
 
         // Vision request to classify an image.
         let request = ClassifyImageRequest()
@@ -78,9 +125,9 @@ final class ImageClassifier {
 
     // MARK: - On-Demand Classification Methods
 
-    func classifyItemOnDemand(_ clipboardItem: ClipboardItem) async throws -> ImageVisionData? {
+    func classifyItemOnDemand(_ clipboardItem: ClipboardItem) async throws -> VisionClassifications? {
         // Check if AI insights ModelConfigurationare enabled in settings
-        guard await SettingsManager.shared.enableAIInsights else {
+        guard await settingsManager.enableAIInsights else {
             return nil
         }
 
@@ -104,13 +151,13 @@ final class ImageClassifier {
     func batchClassifyItems(
         _ items: [ClipboardItem],
         progressHandler: ((Int, Int) async -> Void)? = nil
-    ) async throws -> [ImageVisionData] {
+    ) async throws -> [VisionClassifications] {
         let diskImageItems = items.filter { item in
             if case .imageOnDisk = item.content { return true }
             return false
         }
 
-        var results: [ImageVisionData] = []
+        var results: [VisionClassifications] = []
         var processedCount = 0
 
         for item in diskImageItems {
@@ -129,8 +176,8 @@ final class ImageClassifier {
         return results
     }
 
-    func getClassificationsForItems(_ items: [ClipboardItem]) async throws -> [UUID: ImageVisionData] {
-        var results: [UUID: ImageVisionData] = [:]
+    func getClassificationsForItems(_ items: [ClipboardItem]) async throws -> [UUID: VisionClassifications] {
+        var results: [UUID: VisionClassifications] = [:]
 
         for item in items {
             if let classification = try await classifyItemOnDemand(item) {
@@ -141,3 +188,4 @@ final class ImageClassifier {
         return results
     }
 }
+

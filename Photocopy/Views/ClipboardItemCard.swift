@@ -9,10 +9,29 @@ import Foundation
 import SwiftUI
 import AppKit
 
-struct ClipboardItemCard: View, Equatable {
+struct ClipboardItemCardWrapper: View {
     let item: ClipboardItem
     let isSelected: Bool
     let onTap: () -> Void
+    
+    var body: some View {
+        if #available(macOS 15.0, *) {
+            ClipboardItemCard<ImageClassifierImpl>(item: item, isSelected: isSelected, onTap: onTap)
+        } else {
+            ClipboardItemCard<NoOpImageClassifier>(item: item, isSelected: isSelected, onTap: onTap)
+        }
+    }
+    
+}
+
+struct ClipboardItemCard<T: ObservableObject & ImageClassifier>: View, Equatable {
+    let item: ClipboardItem
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    // Environment
+    @EnvironmentObject var imageClassifier: T
+    @EnvironmentObject var settingsManager: SettingsManager
     
     // MARK: - State
     @State private var aiInsights: ImageVisionData?
@@ -25,110 +44,119 @@ struct ClipboardItemCard: View, Equatable {
         return lhs.item.id == rhs.item.id && lhs.isSelected == rhs.isSelected
     }
     
-    var body: some View {
-        HStack(spacing: 12) {
-            // Left side: Icon and type tag grouped together
-            VStack(spacing: 6) {
-                // Icon (always SF Symbol, even for images)
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(contentTypeColor.opacity(0.15))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(contentTypeColor.opacity(0.3), lineWidth: 1)
-                        )
-                    
-                    contentTypeIcon
-                        .foregroundColor(contentTypeColor)
-                        .font(.system(size: 16))
-                }
-                .frame(width: 40, height: 40)
+    var tagLeft: some View {
+        // Left side: Icon and type tag grouped together
+        VStack(spacing: 6) {
+            // Icon (always SF Symbol, even for images)
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(contentTypeColor.opacity(0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(contentTypeColor.opacity(0.3), lineWidth: 1)
+                    )
                 
-                // Type tag
-                Text(item.contentType.rawValue.capitalized)
-                    .font(.caption)
-                    .fontWeight(.medium)
+                contentTypeIcon
                     .foregroundColor(contentTypeColor)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(contentTypeColor.opacity(0.15), in: Capsule())
+                    .font(.system(size: 16))
             }
-            .frame(width: 60)
+            .frame(width: 40, height: 40)
             
-            // Right side: Content preview and timestamp
-            VStack(alignment: .leading, spacing: 6) {
-                // Content area - text or image
-                if item.contentType == .image,
-                   let imageData = item.imageData,
-                   let nsImage = ImageCache.shared.getImage(for: imageData) {
-                    // Display image in the content area (no white background)
-                    Image(nsImage: nsImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity, maxHeight: 100)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.primary.opacity(0.2), lineWidth: 0.5)
-                        )
-                } else {
-                    // Display text content with white background
-                    Text(item.shortPreview)
-                        .font(.subheadline)
-                        .lineLimit(5)
-                        .multilineTextAlignment(.leading)
-                        .foregroundColor(.black)
-                        .padding(8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color.white.opacity(0.9))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .stroke(Color.primary.opacity(0.2), lineWidth: 0.5)
-                                )
-                        )
-                }
-                
-                // Timestamp aligned to the right
-                HStack {
-                    // Source app (always available now)
-                    HStack(spacing: 4) {
-                        // App icon
-                        sourceAppIcon
-                        
-                        // App name
-                        Text(item.sourceApp.name)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.secondary.opacity(0.1), in: Capsule())
+            // Type tag
+            Text(item.contentType.rawValue.capitalized)
+                .font(.caption)
+                .fontWeight(.medium)
+                .foregroundColor(contentTypeColor)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(contentTypeColor.opacity(0.15), in: Capsule())
+        }
+        .frame(width: 60)
+    }
+    
+    var contentPreviewAndTimestamp: some View {
+        // Right side: Content preview and timestamp
+        VStack(alignment: .leading, spacing: 6) {
+            // Content area - text or image
+            if item.contentType == .image,
+               let imageData = item.imageData,
+               let nsImage = ImageCache.shared.getImage(for: imageData) {
+                // Display image in the content area (no white background)
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.primary.opacity(0.2), lineWidth: 0.5)
+                    )
+            } else {
+                // Display text content with white background
+                Text(item.shortPreview)
+                    .font(.subheadline)
+                    .lineLimit(5)
+                    .multilineTextAlignment(.leading)
+                    .foregroundColor(.black)
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.white.opacity(0.9))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(Color.primary.opacity(0.2), lineWidth: 0.5)
+                            )
+                    )
+            }
+            
+            // Timestamp aligned to the right
+            HStack {
+                // Source app (always available now)
+                HStack(spacing: 4) {
+                    // App icon
+                    sourceAppIcon
                     
-                    Spacer()
-                    Text(timeAgo)
+                    // App name
+                    Text(item.sourceApp.name)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.secondary.opacity(0.1), in: Capsule())
                 
-                // AI Classification Pills (shown when available and enabled)
-                if item.contentType == .image && SettingsManager.shared.enableAIInsights {
-                    classificationPillsView
-                }
+                Spacer()
+                Text(timeAgo)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
+            
+            // AI Classification Pills (shown when available and enabled)
+            if item.contentType == .image && settingsManager.enableAIInsights {
+                classificationPillsView
+            }
+        }
+    }
+    
+    var background: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.primary.opacity(0.05))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: isSelected ? 2 : 1)
+            )
+            .shadow(color: .black.opacity(isSelected ? 0.2 : 0.1), radius: isSelected ? 8 : 4, x: 0, y: isSelected ? 4 : 2)
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            tagLeft
+            contentPreviewAndTimestamp
         }
         .padding(8)
         .frame(width: 380, height: 180)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isSelected ? Color.accentColor.opacity(0.15) : Color.primary.opacity(0.05))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: isSelected ? 2 : 1)
-                )
-                .shadow(color: .black.opacity(isSelected ? 0.2 : 0.1), radius: isSelected ? 8 : 4, x: 0, y: isSelected ? 4 : 2)
-        )
+        .background(background)
         .scaleEffect(isSelected ? 1.02 : 1.0)
         .animation(.easeInOut(duration: 0.2), value: isSelected)
         .onTapGesture {
@@ -136,7 +164,7 @@ struct ClipboardItemCard: View, Equatable {
         }
         .onAppear {
             // Auto-generate AI insights when enabled and item is an image
-            if item.contentType == .image && SettingsManager.shared.enableAIInsights && aiInsights == nil {
+            if item.contentType == .image && settingsManager.enableAIInsights && aiInsights == nil {
                 generateAIInsights()
             }
         }
@@ -224,7 +252,7 @@ struct ClipboardItemCard: View, Equatable {
             return
         }
         
-        guard SettingsManager.shared.enableAIInsights else {
+        guard settingsManager.enableAIInsights else {
             print("❌ AI Insights are disabled in settings")
             return
         }
@@ -233,7 +261,7 @@ struct ClipboardItemCard: View, Equatable {
         
         Task {
             do {
-                if let classification = try await ImageClassifier.shared.classifyItemOnDemand(item) {
+                if let classification = try await imageClassifier.classifyItemOnDemand(item) {
                     await MainActor.run {
                         self.aiInsights = ImageVisionData(
                             clipboardItemId: item.id,

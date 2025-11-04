@@ -12,13 +12,13 @@ import os.log
 
 @MainActor
 class OverlayWindowManager: NSObject, ObservableObject {
-    static let shared = OverlayWindowManager()
-    
     @Published var isVisible = false
     
     private var overlayWindow: NSWindow?
-    private var overlayHostingView: NSHostingView<OverlayView>?
+    private var overlayHostingView: NSHostingView<AnyView>?
     private var previouslyActiveApp: NSRunningApplication?
+    
+    private let clipboardManagerProvider: ClipboardManagerProvider
     
     // Logging
     private let logger = Logger(subsystem: "com.photocopy.app", category: "OverlayWindowManager")
@@ -29,6 +29,10 @@ class OverlayWindowManager: NSObject, ObservableObject {
     private let animationDuration: TimeInterval = 0.1
     
     var onWindowHidden: (() -> Void)?
+    
+    init(clipboardManagerProvider: ClipboardManagerProvider) {
+        self.clipboardManagerProvider = clipboardManagerProvider
+    }
     
     // MARK: - Window Management
     
@@ -74,8 +78,9 @@ class OverlayWindowManager: NSObject, ObservableObject {
             self?.hideOverlay()
             self?.activatePreviousApp()
         })
+        .environmentObject(clipboardManagerProvider.provide())
         
-        overlayHostingView = NSHostingView(rootView: overlayView)
+        overlayHostingView = NSHostingView(rootView: AnyView(overlayView))
         
         let screen = getCurrentActiveScreen()
         let screenFrame = screen.visibleFrame

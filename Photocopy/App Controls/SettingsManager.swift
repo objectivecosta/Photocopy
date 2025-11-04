@@ -3,9 +3,7 @@ import SwiftUI
 import ServiceManagement
 
 @MainActor
-class SettingsManager: ObservableObject {
-    static let shared = SettingsManager()
-    
+class SettingsManager: ObservableObject {    
     // MARK: - Published Properties
     @Published var maxHistoryItems: Int = 50
     @Published var enableTextItems: Bool = true
@@ -20,7 +18,7 @@ class SettingsManager: ObservableObject {
     // MARK: - Private Properties
     private let userDefaults = UserDefaults.standard
     
-    private init() {
+    init() {
         loadSettings()
         setupNotificationObservers()
     }

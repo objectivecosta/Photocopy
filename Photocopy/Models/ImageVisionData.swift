@@ -81,14 +81,14 @@ final class ImageVisionData {
 
 @available(macOS 15.0, *)
 extension ImageVisionData {
-    convenience init(clipboardItem: ClipboardItem? = nil, imageClassifierData: ImageClassifier.ImageVisionData) {
+    convenience init(clipboardItem: ClipboardItem? = nil, imageClassifierData: VisionClassifications) {
         self.init(
             clipboardItemId: clipboardItem?.id,
             observations: imageClassifierData.observations
         )
     }
 
-    func matchesClassifierData(_ classifierData: ImageClassifier.ImageVisionData) -> Bool {
+    func matchesClassifierData(_ classifierData: VisionClassifications) -> Bool {
         let dict = observationsDictionary
         return dict.keys.sorted() == classifierData.observations.keys.sorted() &&
                dict.allSatisfy { key, value in

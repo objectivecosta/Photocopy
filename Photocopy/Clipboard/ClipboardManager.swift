@@ -11,10 +11,10 @@ import SwiftData
 import UserNotifications
 import os.log
 
+
+
 @MainActor
-class ClipboardManager: ObservableObject {
-    static let shared = ClipboardManager()
-    
+class ClipboardManager: ObservableObject {    
     @Published var clipboardItems: [ClipboardItem] = []
     @Published var filteredItems: [ClipboardItem] = []
     @Published var isMonitoring = false
@@ -28,7 +28,8 @@ class ClipboardManager: ObservableObject {
     private var lastChangeCount: Int = 0
     private var monitoringTimer: Timer?
     private var modelContext: ModelContext?
-    private let settingsManager = SettingsManager.shared
+    private let overlayWindowManager: OverlayWindowManager
+    private let settingsManager: SettingsManager
     
     // Logging
     private let logger = Logger(subsystem: "com.photocopy.app", category: "ClipboardManager")
@@ -47,7 +48,14 @@ class ClipboardManager: ObservableObject {
     
     private var cleanupTimer: Timer?
     
-    init() {
+    init(
+        overlayWindowManager: OverlayWindowManager,
+        settingsManager: SettingsManager
+    ) {
+        self.overlayWindowManager = overlayWindowManager
+        self.settingsManager = settingsManager
+        
+        // Bootstrap
         lastChangeCount = pasteboard.changeCount
         setupNotificationObservers()
         requestNotificationPermissions()
@@ -867,7 +875,7 @@ class ClipboardManager: ObservableObject {
         
         // Use the overlay window manager to paste to the previously active app
         // TODO: Extract paste functionality into a separate PasteManager class and remove singleton dependency - OverlayWindowManager shouldn't handle pasting
-        OverlayWindowManager.shared.pasteToActiveApp()
+        overlayWindowManager.pasteToActiveApp()
         
         item.incrementAccessCount()
         

@@ -12,7 +12,7 @@ import AppKit
 struct OverlayView: View {
     let onDismiss: () -> Void
     
-    @StateObject private var clipboardManager = ClipboardManager.shared
+    @EnvironmentObject var clipboardManager: ClipboardManager
     @State private var selectedIndex: Int = 0
     @State private var keyboardMonitor: Any?
     @State private var searchText: String = ""
@@ -116,7 +116,7 @@ struct OverlayView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(spacing: 20) {
                             ForEach(Array(clipboardManager.filteredItems.enumerated()), id: \.element.id) { index, item in
-                                ClipboardItemCard(
+                                ClipboardItemCardWrapper(
                                     item: item,
                                     isSelected: index == selectedIndex,
                                     onTap: {
