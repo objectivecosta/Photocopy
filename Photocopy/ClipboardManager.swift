@@ -47,7 +47,7 @@ class ClipboardManager: ObservableObject {
     
     private var cleanupTimer: Timer?
     
-    private init() {
+    init() {
         lastChangeCount = pasteboard.changeCount
         setupNotificationObservers()
         requestNotificationPermissions()

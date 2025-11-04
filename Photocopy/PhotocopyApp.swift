@@ -12,11 +12,11 @@ import os.log
 @main
 struct PhotocopyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var clipboardManager = ClipboardManager.shared
-    @StateObject private var hotkeyManager = HotkeyManager.shared
+    @StateObject private var clipboardManager = ClipboardManager()
+    @StateObject private var hotkeyManager = HotkeyManager()
+    @StateObject private var menuBarManager = MenuBarManager()
     @StateObject private var overlayManager = OverlayWindowManager.shared
     @StateObject private var settingsManager = SettingsManager.shared
-    @StateObject private var menuBarManager = MenuBarManager.shared
     @State private var showOnboarding = true
     
     // Logging
@@ -62,7 +62,6 @@ struct PhotocopyApp: App {
                 .frame(width: 0, height: 0)
                 .onAppear {
                     setupApp()
-                    checkIfShouldShowOnboarding()
                     // Hide the main window immediately
                     DispatchQueue.main.async {
                         NSApp.windows.first?.close()
@@ -111,20 +110,6 @@ struct PhotocopyApp: App {
         logger.info("📱 Menu bar set up")
     }
     
-    private func checkIfShouldShowOnboarding() {
-        // Check if this is the first launch or if permissions are not granted
-        let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
-        
-        if hasLaunchedBefore && hotkeyManager.isHotkeyRegistered {
-            showOnboarding = false
-        } else {
-            showOnboarding = true
-        }
-        
-        // Mark that the app has been launched
-        UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
-    }
-
     // MARK: - ML Classification Generation
 
     @MainActor

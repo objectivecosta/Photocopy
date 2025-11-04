@@ -3,14 +3,10 @@ import AppKit
 
 @MainActor
 class MenuBarManager: ObservableObject {
-    static let shared = MenuBarManager()
-    
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var settingsWindow: NSWindow?
     var checkForUpdatesClosure: (() -> Void)?
-    
-    private init() {}
     
     func setupMenuBar() {
         // Create status item

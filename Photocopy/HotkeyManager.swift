@@ -11,9 +11,7 @@ import AppKit
 import os.log
 
 @MainActor
-class HotkeyManager: ObservableObject {
-    static let shared = HotkeyManager()
-    
+class HotkeyManager: ObservableObject {    
     @Published var isHotkeyRegistered = false
     
     private var eventHotKeyRef: EventHotKeyRef?
@@ -31,7 +29,7 @@ class HotkeyManager: ObservableObject {
     // Logging
     private let logger = Logger(subsystem: "com.photocopy.app", category: "HotkeyManager")
     
-    private init() {
+    init() {
         // Start a timer to periodically check for accessibility permissions
         startPermissionMonitoring()
     }
