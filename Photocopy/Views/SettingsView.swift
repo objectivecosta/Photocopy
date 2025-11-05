@@ -10,7 +10,9 @@ struct SettingsView: View {
     @AppStorage("excludedApps") private var excludedAppsData: Data = Data()
     @AppStorage("enableSensitiveContentFiltering") private var enableSensitiveContentFiltering: Bool = true
     @AppStorage("enableAIInsights") private var enableAIInsights: Bool = false
-    
+
+    @EnvironmentObject var settingsManager: SettingsManager
+
     @State private var excludedApps: [String] = []
     @State private var newAppName: String = ""
     @State private var showingClearHistoryAlert: Bool = false
@@ -141,25 +143,66 @@ struct SettingsView: View {
                         .font(.title2)
                         .foregroundColor(.accentColor)
                         .frame(width: 24)
-                    
+
                     Text("Startup")
                         .font(.title2)
                         .fontWeight(.semibold)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("Launch at system startup", isOn: $autoLaunchOnStartup)
                         .onChange(of: autoLaunchOnStartup) { _, newValue in
                             setAutoLaunch(enabled: newValue)
                         }
-                    
+
                     Text("Automatically start Photocopy when you log in to your Mac")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .padding(.leading, 32)
             }
-            
+
+            // Hotkey Section
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Image(systemName: "keyboard")
+                        .font(.title2)
+                        .foregroundColor(.accentColor)
+                        .frame(width: 24)
+
+                    Text("Hotkey")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Global hotkey for paste menu:")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Picker("Hotkey", selection: $settingsManager.hotkeyModifier) {
+                            ForEach(HotkeyModifier.allCases) { modifier in
+                                HStack {
+                                    Text(modifier.displayName)
+                                        .font(.system(.body, design: .monospaced))
+                                    Text("(\(modifier.description))")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .tag(modifier)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 180)
+                    }
+
+                    Text("Choose the keyboard shortcut to open the paste menu. The change will take effect immediately.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.leading, 32)
+            }
+
             Spacer(minLength: 20)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)

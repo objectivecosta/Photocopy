@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import ServiceManagement
+import Carbon
 
 @MainActor
 class SettingsManager: ObservableObject {    
@@ -14,6 +15,11 @@ class SettingsManager: ObservableObject {
     @Published var excludedApps: [String] = []
     @Published var enableSensitiveContentFiltering: Bool = true
     @Published var enableAIInsights: Bool = false
+    @Published var hotkeyModifier: HotkeyModifier = .cmdShift {
+        didSet {
+            saveSettings()
+        }
+    }
     
     // MARK: - Private Properties
     private let userDefaults = UserDefaults.standard
@@ -34,7 +40,13 @@ class SettingsManager: ObservableObject {
         autoLaunchOnStartup = userDefaults.object(forKey: "autoLaunchOnStartup") as? Bool ?? false
         enableSensitiveContentFiltering = userDefaults.object(forKey: "enableSensitiveContentFiltering") as? Bool ?? true
         enableAIInsights = userDefaults.object(forKey: "enableAIInsights") as? Bool ?? false
-        
+
+        // Load hotkey modifier
+        if let hotkeyModifierRaw = userDefaults.string(forKey: "hotkeyModifier"),
+           let modifier = HotkeyModifier(rawValue: hotkeyModifierRaw) {
+            hotkeyModifier = modifier
+        }
+
         if let excludedAppsData = userDefaults.data(forKey: "excludedApps"),
            let apps = try? JSONDecoder().decode([String].self, from: excludedAppsData) {
             excludedApps = apps
@@ -50,7 +62,8 @@ class SettingsManager: ObservableObject {
         userDefaults.set(autoLaunchOnStartup, forKey: "autoLaunchOnStartup")
         userDefaults.set(enableSensitiveContentFiltering, forKey: "enableSensitiveContentFiltering")
         userDefaults.set(enableAIInsights, forKey: "enableAIInsights")
-        
+        userDefaults.set(hotkeyModifier.rawValue, forKey: "hotkeyModifier")
+
         if let excludedAppsData = try? JSONEncoder().encode(excludedApps) {
             userDefaults.set(excludedAppsData, forKey: "excludedApps")
         }
@@ -223,6 +236,41 @@ class SettingsManager: ObservableObject {
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+}
+
+// MARK: - Hotkey Modifier Enum
+enum HotkeyModifier: String, CaseIterable, Identifiable, Codable {
+    case cmdShift = "cmdShift"
+    case ctrlShift = "ctrlShift"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .cmdShift:
+            return "⌘⇧V"
+        case .ctrlShift:
+            return "⌃⇧V"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .cmdShift:
+            return "Command + Shift + V"
+        case .ctrlShift:
+            return "Control + Shift + V"
+        }
+    }
+
+    var carbonModifierFlags: UInt32 {
+        switch self {
+        case .cmdShift:
+            return UInt32(cmdKey | shiftKey)
+        case .ctrlShift:
+            return UInt32(controlKey | shiftKey)
+        }
     }
 }
 

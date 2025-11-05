@@ -5,9 +5,12 @@
 //  Created by Rafael Costa on 2025-11-04.
 //
 
+import SwiftUI
+
+
 @MainActor
 final class AppController {
-    lazy var imageClassifier: ImageClassifier = {
+    lazy var imageClassifier: any ImageClassifier & ObservableObject = {
         if #available(macOS 15.0, *) {
             ImageClassifierImpl(settingsManager: settingsManager)
         } else {
@@ -23,7 +26,7 @@ final class AppController {
     }()
     
     lazy var hotkeyManager = {
-        HotkeyManager()
+        HotkeyManager(settingsManager: settingsManager)
     }()
     
     lazy var menuBarManager = {
@@ -31,7 +34,7 @@ final class AppController {
     }()
     
     lazy var overlayManager = {
-        OverlayWindowManager(clipboardManagerProvider: clipboardManagerProvider)
+        OverlayWindowManager(imageClassifier: imageClassifier, settingsManager: settingsManager, clipboardManagerProvider: clipboardManagerProvider)
     }()
     
     lazy var settingsManager = {

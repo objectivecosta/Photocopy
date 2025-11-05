@@ -9,29 +9,33 @@ import Foundation
 import Carbon
 import AppKit
 import os.log
+import Combine
 
 @MainActor
-class HotkeyManager: ObservableObject {    
+class HotkeyManager: ObservableObject {
     @Published var isHotkeyRegistered = false
-    
+
     private var eventHotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
     private let hotkeyID = EventHotKeyID(signature: FourCharCode("PCPY".fourCharCodeValue), id: 1)
-    
-    // Default hotkey: Command + Shift + V
-    private var modifierFlags: UInt32 = UInt32(cmdKey | shiftKey)
+
+    // Hotkey configuration
     private var keyCode: UInt32 = 9 // V key
-    
+    private let settingsManager: SettingsManager
+
     var onHotkeyPressed: (() -> Void)?
-    
+
     private var permissionCheckTimer: Timer?
-    
+    private var cancellables = Set<AnyCancellable>()
+
     // Logging
     private let logger = Logger(subsystem: "com.photocopy.app", category: "HotkeyManager")
-    
-    init() {
+
+    init(settingsManager: SettingsManager) {
+        self.settingsManager = settingsManager
         // Start a timer to periodically check for accessibility permissions
         startPermissionMonitoring()
+        setupSettingsObserver()
     }
     
     // MARK: - Hotkey Registration
@@ -71,19 +75,23 @@ class HotkeyManager: ObservableObject {
             return
         }
         
+        // Get current modifier flags from settings
+        let currentModifierFlags = settingsManager.hotkeyModifier.carbonModifierFlags
+
         // Register the hotkey
         let registerStatus = RegisterEventHotKey(
             keyCode,
-            modifierFlags,
+            currentModifierFlags,
             hotkeyID,
             GetEventDispatcherTarget(),
             0,
             &eventHotKeyRef
         )
-        
+
         if registerStatus == noErr {
             isHotkeyRegistered = true
-            logger.info("⌨️ Global hotkey registered: Cmd+Shift+V")
+            let hotkeyDescription = settingsManager.hotkeyModifier.displayName
+            logger.info("⌨️ Global hotkey registered: \(hotkeyDescription)")
         } else {
             logger.error("❌ Failed to register hotkey: \(registerStatus)")
             // Clean up event handler if hotkey registration failed
@@ -238,8 +246,30 @@ class HotkeyManager: ObservableObject {
         alert.runModal()
     }
     
+    // MARK: - Settings Observer
+
+    private func setupSettingsObserver() {
+        // Listen for changes to hotkey modifier
+        settingsManager.$hotkeyModifier
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    // Re-register hotkey when modifier changes
+                    if self.isHotkeyRegistered {
+                        print("🔄 Hotkey modifier changed, re-registering...")
+                        self.unregisterGlobalHotkey()
+                        // Small delay before re-registering to avoid conflicts
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            self.registerGlobalHotkey()
+                        }
+                    }
+                }
+            }
+            .store(in: &cancellables)
+    }
+
     // MARK: - Permission Monitoring
-    
+
     private func startPermissionMonitoring() {
         permissionCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -271,38 +301,24 @@ class HotkeyManager: ObservableObject {
     // MARK: - Custom Hotkey Configuration
     
     func updateHotkey(keyCode: UInt32, modifierFlags: UInt32) {
-        // Unregister current hotkey
-        unregisterGlobalHotkey()
-        
-        // Update configuration
+        // Find matching hotkey modifier
+        for modifier in HotkeyModifier.allCases {
+            if modifier.carbonModifierFlags == modifierFlags {
+                settingsManager.hotkeyModifier = modifier
+                break
+            }
+        }
+
+        // Update key code if needed
         self.keyCode = keyCode
-        self.modifierFlags = modifierFlags
-        
-        // Re-register with new configuration
-        registerGlobalHotkey()
+
+        // Settings change will automatically trigger hotkey re-registration
+        // through the observer we set up
     }
     
     func getHotkeyDescription() -> String {
-        var description = ""
-        
-        if modifierFlags & UInt32(controlKey) != 0 {
-            description += "⌃"
-        }
-        if modifierFlags & UInt32(optionKey) != 0 {
-            description += "⌥"
-        }
-        if modifierFlags & UInt32(shiftKey) != 0 {
-            description += "⇧"
-        }
-        if modifierFlags & UInt32(cmdKey) != 0 {
-            description += "⌘"
-        }
-        
-        // Convert key code to character
-        let keyChar = keyCodeToCharacter(keyCode)
-        description += keyChar
-        
-        return description
+        // Simply return the display name from current settings
+        return settingsManager.hotkeyModifier.displayName
     }
     
     private func keyCodeToCharacter(_ keyCode: UInt32) -> String {

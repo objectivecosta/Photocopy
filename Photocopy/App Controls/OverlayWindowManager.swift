@@ -18,6 +18,8 @@ class OverlayWindowManager: NSObject, ObservableObject {
     private var overlayHostingView: NSHostingView<AnyView>?
     private var previouslyActiveApp: NSRunningApplication?
     
+    private let imageClassifier: any ImageClassifier & ObservableObject
+    private let settingsManager: SettingsManager
     private let clipboardManagerProvider: ClipboardManagerProvider
     
     // Logging
@@ -30,7 +32,13 @@ class OverlayWindowManager: NSObject, ObservableObject {
     
     var onWindowHidden: (() -> Void)?
     
-    init(clipboardManagerProvider: ClipboardManagerProvider) {
+    init(
+        imageClassifier: any ImageClassifier & ObservableObject,
+        settingsManager: SettingsManager,
+        clipboardManagerProvider: ClipboardManagerProvider
+    ) {
+        self.imageClassifier = imageClassifier
+        self.settingsManager = settingsManager
         self.clipboardManagerProvider = clipboardManagerProvider
     }
     
@@ -79,6 +87,8 @@ class OverlayWindowManager: NSObject, ObservableObject {
             self?.activatePreviousApp()
         })
         .environmentObject(clipboardManagerProvider.provide())
+        .environmentObject(settingsManager)
+        .environmentObject(imageClassifier)
         
         overlayHostingView = NSHostingView(rootView: AnyView(overlayView))
         
