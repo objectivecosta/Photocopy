@@ -89,7 +89,7 @@ struct SettingsView: View {
             }
             .background(Color(NSColor.controlBackgroundColor))
         }
-        .frame(minWidth: 500, minHeight: 400)
+        .frame(minWidth: 500, minHeight: 550)
         .onAppear {
             loadExcludedApps()
         }

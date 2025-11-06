@@ -23,6 +23,7 @@ class MenuBarManager: ObservableObject {
         if let button = statusItem?.button {
             // Load the icon PNG image from the bundle
             let iconImage = NSImage(named: "MenuBarIcon_Alt")
+            iconImage?.isTemplate = true
                 
             button.image = iconImage
             button.action = #selector(statusItemClicked)
@@ -70,18 +71,22 @@ class MenuBarManager: ObservableObject {
     }
     
     @objc private func showPreferences() {
-        // Always create a fresh settings window
+        // Close existing settings window if it's open
+        if let existingWindow = settingsWindow, existingWindow.isVisible {
+            existingWindow.close()
+        }
+        // Create a fresh settings window
         createSettingsWindow()
     }
     
     private func createSettingsWindow() {
         let settingsView = SettingsView()
             .environmentObject(settingsManager)
-            .frame(minWidth: 500, minHeight: 400)
+            .frame(minWidth: 500, minHeight: 550)
         let hostingController = NSHostingController(rootView: settingsView)
         
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 550),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -91,7 +96,7 @@ class MenuBarManager: ObservableObject {
         window.contentViewController = hostingController
         window.center()
         window.setFrameAutosaveName("SettingsWindow")
-        window.minSize = NSSize(width: 500, height: 400)
+        window.minSize = NSSize(width: 500, height: 550)
         window.maxSize = NSSize(width: 700, height: 600)
         
         // Configure window appearance
