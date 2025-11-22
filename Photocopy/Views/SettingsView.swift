@@ -115,7 +115,7 @@ struct SettingsView: View {
                         Text("Retention Strategy:")
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        Picker("Retention Strategy", selection: $settingsManager.retentionStrategy) {
+                        Picker("", selection: $settingsManager.retentionStrategy) {
                             ForEach(RetentionStrategy.allCases) { strategy in
                                 Text(strategy.displayName).tag(strategy)
                             }
@@ -141,7 +141,7 @@ struct SettingsView: View {
                             Text("Keep items for:")
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             
-                            Picker("Duration", selection: $settingsManager.historyRetentionDuration) {
+                            Picker("", selection: $settingsManager.historyRetentionDuration) {
                                 Text("1 Day").tag(TimeInterval(24 * 60 * 60))
                                 Text("3 Days").tag(TimeInterval(3 * 24 * 60 * 60))
                                 Text("1 Week").tag(TimeInterval(7 * 24 * 60 * 60))

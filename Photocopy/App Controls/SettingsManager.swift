@@ -6,9 +6,15 @@ import Carbon
 @MainActor
 class SettingsManager: ObservableObject {    
     // MARK: - Published Properties
-    @Published var maxHistoryItems: Int = 50
-    @Published var retentionStrategy: RetentionStrategy = .count
-    @Published var historyRetentionDuration: TimeInterval = 7 * 24 * 60 * 60 // 7 days default
+    @Published var maxHistoryItems: Int = 50 {
+        didSet { saveSettings() }
+    }
+    @Published var retentionStrategy: RetentionStrategy = .count {
+        didSet { saveSettings() }
+    }
+    @Published var historyRetentionDuration: TimeInterval = 7 * 24 * 60 * 60 { // 7 days default
+        didSet { saveSettings() }
+    }
     @Published var enableTextItems: Bool = true
     @Published var enableImageItems: Bool = true
     @Published var enableFileItems: Bool = true
