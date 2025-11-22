@@ -112,15 +112,44 @@ struct SettingsView: View {
                 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("Maximum items to keep:")
+                        Text("Retention Strategy:")
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        Stepper(value: $maxHistoryItems, in: 10...200, step: 10) {
-                            Text("\(maxHistoryItems)")
-                                .frame(width: 50, alignment: .trailing)
-                                .font(.system(.body, design: .monospaced))
+                        Picker("Retention Strategy", selection: $settingsManager.retentionStrategy) {
+                            ForEach(RetentionStrategy.allCases) { strategy in
+                                Text(strategy.displayName).tag(strategy)
+                            }
                         }
-                        .frame(width: 120)
+                        .pickerStyle(.segmented)
+                        .frame(width: 180)
+                    }
+                    
+                    if settingsManager.retentionStrategy == .count {
+                        HStack {
+                            Text("Maximum items to keep:")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Stepper(value: $maxHistoryItems, in: 10...200, step: 10) {
+                                Text("\(maxHistoryItems)")
+                                    .frame(width: 50, alignment: .trailing)
+                                    .font(.system(.body, design: .monospaced))
+                            }
+                            .frame(width: 120)
+                        }
+                    } else {
+                        HStack {
+                            Text("Keep items for:")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            
+                            Picker("Duration", selection: $settingsManager.historyRetentionDuration) {
+                                Text("1 Day").tag(TimeInterval(24 * 60 * 60))
+                                Text("3 Days").tag(TimeInterval(3 * 24 * 60 * 60))
+                                Text("1 Week").tag(TimeInterval(7 * 24 * 60 * 60))
+                                Text("2 Weeks").tag(TimeInterval(14 * 24 * 60 * 60))
+                                Text("1 Month").tag(TimeInterval(30 * 24 * 60 * 60))
+                            }
+                            .frame(width: 180)
+                        }
                     }
                     
                     HStack {

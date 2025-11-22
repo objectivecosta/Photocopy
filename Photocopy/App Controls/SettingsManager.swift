@@ -7,6 +7,8 @@ import Carbon
 class SettingsManager: ObservableObject {    
     // MARK: - Published Properties
     @Published var maxHistoryItems: Int = 50
+    @Published var retentionStrategy: RetentionStrategy = .count
+    @Published var historyRetentionDuration: TimeInterval = 7 * 24 * 60 * 60 // 7 days default
     @Published var enableTextItems: Bool = true
     @Published var enableImageItems: Bool = true
     @Published var enableFileItems: Bool = true
@@ -33,6 +35,13 @@ class SettingsManager: ObservableObject {
     
     private func loadSettings() {
         maxHistoryItems = userDefaults.object(forKey: "maxHistoryItems") as? Int ?? 50
+        
+        if let strategyRaw = userDefaults.string(forKey: "retentionStrategy"),
+           let strategy = RetentionStrategy(rawValue: strategyRaw) {
+            retentionStrategy = strategy
+        }
+        
+        historyRetentionDuration = userDefaults.object(forKey: "historyRetentionDuration") as? TimeInterval ?? (7 * 24 * 60 * 60)
         enableTextItems = userDefaults.object(forKey: "enableTextItems") as? Bool ?? true
         enableImageItems = userDefaults.object(forKey: "enableImageItems") as? Bool ?? true
         enableFileItems = userDefaults.object(forKey: "enableFileItems") as? Bool ?? true
@@ -55,6 +64,8 @@ class SettingsManager: ObservableObject {
     
     func saveSettings() {
         userDefaults.set(maxHistoryItems, forKey: "maxHistoryItems")
+        userDefaults.set(retentionStrategy.rawValue, forKey: "retentionStrategy")
+        userDefaults.set(historyRetentionDuration, forKey: "historyRetentionDuration")
         userDefaults.set(enableTextItems, forKey: "enableTextItems")
         userDefaults.set(enableImageItems, forKey: "enableImageItems")
         userDefaults.set(enableFileItems, forKey: "enableFileItems")

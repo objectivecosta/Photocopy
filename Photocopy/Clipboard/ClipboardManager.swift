@@ -723,13 +723,13 @@ class ClipboardManager: ObservableObject {
         }
         
         // Limit the number of items based on settings
-        let maxItems = settingsManager.maxHistoryItems
-        if clipboardItems.count > maxItems {
-            let itemsToRemove = clipboardItems.suffix(clipboardItems.count - maxItems)
-            for itemToRemove in itemsToRemove {
-                modelContext.delete(itemToRemove)
-            }
-            clipboardItems = Array(clipboardItems.prefix(maxItems))
+        switch settingsManager.retentionStrategy {
+        case .count:
+            enforceItemLimit(settingsManager.maxHistoryItems)
+        case .time:
+            // For time-based, we don't strictly limit by count on insert,
+            // but we might want a safety cap (e.g., 3072) to prevent memory issues
+            enforceItemLimit(1024 * 3)
         }
         
         // Update filtered items
@@ -788,6 +788,16 @@ class ClipboardManager: ObservableObject {
         } catch {
             print("❌ Failed to clear clipboard history: \(error)")
         }
+    }
+    
+    private func enforceItemLimit(_ limit: Int) {
+        guard let modelContext = modelContext, clipboardItems.count > limit else { return }
+        
+        let itemsToRemove = clipboardItems.suffix(clipboardItems.count - limit)
+        for itemToRemove in itemsToRemove {
+            modelContext.delete(itemToRemove)
+        }
+        clipboardItems = Array(clipboardItems.prefix(limit))
     }
     
     // MARK: - Data Loading
@@ -906,9 +916,17 @@ class ClipboardManager: ObservableObject {
         let currentDate = Date()
         var itemsToRemove: [ClipboardItem] = []
         
-        // Remove items older than maxItemAge
+        // Remove items older than maxItemAge or user defined duration
+        let retentionDuration: TimeInterval
+        switch settingsManager.retentionStrategy {
+        case .count:
+            retentionDuration = maxItemAge // Use hardcoded 7 days for count strategy as safety net
+        case .time:
+            retentionDuration = settingsManager.historyRetentionDuration
+        }
+
         for item in clipboardItems {
-            if currentDate.timeIntervalSince(item.timestamp) > maxItemAge {
+            if currentDate.timeIntervalSince(item.timestamp) > retentionDuration {
                 itemsToRemove.append(item)
             }
         }
@@ -921,14 +939,16 @@ class ClipboardManager: ObservableObject {
             }
         }
         
-        // Limit total items if we exceed the maximum
-        let maxItems = settingsManager.maxHistoryItems
-        if clipboardItems.count > maxItems {
-            let excessItems = clipboardItems.suffix(clipboardItems.count - maxItems)
-            for item in excessItems {
-                if let index = clipboardItems.firstIndex(where: { $0.id == item.id }) {
-                    clipboardItems.remove(at: index)
-                    modelContext.delete(item)
+        // Limit total items if we exceed the maximum (only for count strategy)
+        if settingsManager.retentionStrategy == .count {
+            let maxItems = settingsManager.maxHistoryItems
+            if clipboardItems.count > maxItems {
+                let excessItems = clipboardItems.suffix(clipboardItems.count - maxItems)
+                for item in excessItems {
+                    if let index = clipboardItems.firstIndex(where: { $0.id == item.id }) {
+                        clipboardItems.remove(at: index)
+                        modelContext.delete(item)
+                    }
                 }
             }
         }
