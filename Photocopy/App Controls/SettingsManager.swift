@@ -309,4 +309,21 @@ extension ClipboardContentType {
             return "Unknown"
         }
     }
-} 
+}
+
+// MARK: - Retention Strategy Enum
+enum RetentionStrategy: String, CaseIterable, Identifiable, Codable {
+    case count = "count"
+    case time = "time"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .count:
+            return "By Count"
+        case .time:
+            return "By Time"
+        }
+    }
+}
