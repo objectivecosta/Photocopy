@@ -940,6 +940,8 @@ class ClipboardManager: ObservableObject {
         }
         
         // Limit total items if we exceed the maximum (only for count strategy)
+        var changesMade = !itemsToRemove.isEmpty
+        
         if settingsManager.retentionStrategy == .count {
             let maxItems = settingsManager.maxHistoryItems
             if clipboardItems.count > maxItems {
@@ -948,16 +950,17 @@ class ClipboardManager: ObservableObject {
                     if let index = clipboardItems.firstIndex(where: { $0.id == item.id }) {
                         clipboardItems.remove(at: index)
                         modelContext.delete(item)
+                        changesMade = true
                     }
                 }
             }
         }
         
         // Save changes if any items were removed
-        if !itemsToRemove.isEmpty || clipboardItems.count > maxItems {
+        if changesMade {
             do {
                 try modelContext.save()
-                print("📋 Automatic cleanup: removed \(itemsToRemove.count) old items")
+                print("📋 Automatic cleanup: removed items (Age: \(itemsToRemove.count) items)")
             } catch {
                 print("❌ Failed to save during cleanup: \(error)")
             }
