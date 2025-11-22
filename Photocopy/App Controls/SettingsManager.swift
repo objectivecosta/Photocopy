@@ -7,30 +7,45 @@ import Carbon
 class SettingsManager: ObservableObject {    
     // MARK: - Published Properties
     @Published var maxHistoryItems: Int = 50 {
-        didSet { saveSettings() }
+        didSet { if !isLoading { saveSettings() } }
     }
     @Published var retentionStrategy: RetentionStrategy = .count {
-        didSet { saveSettings() }
+        didSet { if !isLoading { saveSettings() } }
     }
     @Published var historyRetentionDuration: TimeInterval = 7 * 24 * 60 * 60 { // 7 days default
-        didSet { saveSettings() }
+        didSet { if !isLoading { saveSettings() } }
     }
-    @Published var enableTextItems: Bool = true
-    @Published var enableImageItems: Bool = true
-    @Published var enableFileItems: Bool = true
-    @Published var enableURLItems: Bool = true
-    @Published var autoLaunchOnStartup: Bool = false
-    @Published var excludedApps: [String] = []
-    @Published var enableSensitiveContentFiltering: Bool = true
-    @Published var enableAIInsights: Bool = false
+    @Published var enableTextItems: Bool = true {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var enableImageItems: Bool = true {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var enableFileItems: Bool = true {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var enableURLItems: Bool = true {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var autoLaunchOnStartup: Bool = false {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var excludedApps: [String] = [] {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var enableSensitiveContentFiltering: Bool = true {
+        didSet { if !isLoading { saveSettings() } }
+    }
+    @Published var enableAIInsights: Bool = false {
+        didSet { if !isLoading { saveSettings() } }
+    }
     @Published var hotkeyModifier: HotkeyModifier = .cmdShift {
-        didSet {
-            saveSettings()
-        }
+        didSet { if !isLoading { saveSettings() } }
     }
     
     // MARK: - Private Properties
     private let userDefaults = UserDefaults.standard
+    private var isLoading = false
     
     init() {
         loadSettings()
@@ -40,6 +55,9 @@ class SettingsManager: ObservableObject {
     // MARK: - Settings Management
     
     private func loadSettings() {
+        isLoading = true
+        defer { isLoading = false }
+        
         maxHistoryItems = userDefaults.object(forKey: "maxHistoryItems") as? Int ?? 50
         
         if let strategyRaw = userDefaults.string(forKey: "retentionStrategy"),
