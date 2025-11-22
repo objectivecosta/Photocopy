@@ -873,11 +873,27 @@ class ClipboardManager: ObservableObject {
             break
         }
         
+        // Update lastChangeCount to ignore the change we just made
+        lastChangeCount = pasteboard.changeCount
+        
         // Use the overlay window manager to paste to the previously active app
         // TODO: Extract paste functionality into a separate PasteManager class and remove singleton dependency - OverlayWindowManager shouldn't handle pasting
         overlayWindowManager.pasteToActiveApp()
         
         item.incrementAccessCount()
+        
+        // Use upsertClipboardItem to handle moving to front and persistence
+        if let modelContext = modelContext {
+            upsertClipboardItem(item, modelContext: modelContext)
+        } else {
+            // Fallback if modelContext is missing (e.g. testing)
+            item.timestamp = Date()
+            if let index = clipboardItems.firstIndex(where: { $0.id == item.id }) {
+                clipboardItems.remove(at: index)
+                clipboardItems.insert(item, at: 0)
+                filterItems()
+            }
+        }
         
         print("📋 Pasted item: \(item.shortPreview)")
     }
