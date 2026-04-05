@@ -30,7 +30,7 @@ final class AppController {
     }()
     
     lazy var menuBarManager = {
-        MenuBarManager(overlayWindowManager: overlayManager, settingsManager: settingsManager)
+        MenuBarManager(overlayWindowManager: overlayManager, settingsManager: settingsManager, logViewerManager: logViewerManager)
     }()
     
     lazy var overlayManager = {
@@ -40,7 +40,11 @@ final class AppController {
     lazy var settingsManager = {
         SettingsManager()
     }()
-    
+
+    lazy var logViewerManager = {
+        LogViewerWindowManager()
+    }()
+
     lazy var clipboardManagerProvider: ClipboardManagerProviderImpl = {
         ClipboardManagerProviderImpl()
     }()

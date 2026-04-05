@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 import AppKit
-import os.log
 
 @MainActor
 class AIInsightsWindowManager: NSObject, ObservableObject {

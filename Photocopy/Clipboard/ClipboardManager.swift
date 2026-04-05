@@ -9,7 +9,6 @@ import Foundation
 import AppKit
 import SwiftData
 import UserNotifications
-import os.log
 
 
 
@@ -131,7 +130,7 @@ class ClipboardManager: ObservableObject {
         } catch {
             logger.error("❌ Error clearing clipboard history: \(error.localizedDescription)")
         }
-        
+
         // Clear from memory
         clipboardItems.removeAll()
         logger.info("🗑️ Clipboard history cleared")
@@ -157,10 +156,10 @@ class ClipboardManager: ObservableObject {
                 self?.performAutomaticCleanup()
             }
         }
-        
+
         logger.info("📋 Clipboard monitoring started")
     }
-    
+
     func stopMonitoring() {
         isMonitoring = false
         monitoringTimer?.invalidate()

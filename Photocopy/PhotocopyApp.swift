@@ -7,7 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import os.log
 
 @main
 struct PhotocopyApp: App {
@@ -93,10 +92,13 @@ struct PhotocopyApp: App {
         // Start services
         appController.clipboardManager.startMonitoring()
         appController.hotkeyManager.registerGlobalHotkey()
-        
-        // Set up auto-launch if enabled
+
+        // Verify auto-launch setting is consistent with login items
+        // This ensures the setting stays in sync if the user manually removed the app from login items
         if appController.settingsManager.autoLaunchOnStartup {
-            appController.settingsManager.setAutoLaunch(enabled: true)
+            if !appController.settingsManager.isRegisteredForAutoLaunch() {
+                appController.settingsManager.setAutoLaunch(enabled: true)
+            }
         }
 
         logger.info("🚀 Photocopy app initialized")

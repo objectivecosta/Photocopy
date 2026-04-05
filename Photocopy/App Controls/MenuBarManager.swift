@@ -5,15 +5,17 @@ import AppKit
 class MenuBarManager: ObservableObject {
     private let overlayWindowManager: OverlayWindowManager
     private let settingsManager: SettingsManager
-    
+    private let logViewerManager: LogViewerWindowManager
+
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var settingsWindow: NSWindow?
     var checkForUpdatesClosure: (() -> Void)?
-    
-    init(overlayWindowManager: OverlayWindowManager, settingsManager: SettingsManager) {
+
+    init(overlayWindowManager: OverlayWindowManager, settingsManager: SettingsManager, logViewerManager: LogViewerWindowManager) {
         self.overlayWindowManager = overlayWindowManager
         self.settingsManager = settingsManager
+        self.logViewerManager = logViewerManager
     }
     
     func setupMenuBar() {
@@ -36,24 +38,31 @@ class MenuBarManager: ObservableObject {
     
     private func setupMenu() {
         let menu = NSMenu()
-        
+
         // Preferences
         let preferencesItem = NSMenuItem(title: "Preferences...", action: #selector(showPreferences), keyEquivalent: ",")
         preferencesItem.target = self
         menu.addItem(preferencesItem)
-        
+
+        // Show Logs
+        let showLogsItem = NSMenuItem(title: "Show Logs", action: #selector(showDebugLogs), keyEquivalent: "")
+        showLogsItem.target = self
+        menu.addItem(showLogsItem)
+
         menu.addItem(NSMenuItem.separator())
-        
+
         // Check for Updates iten
         let checkForUpdatesItem = NSMenuItem(title: "Check for Updates", action: #selector(checkForUpdates), keyEquivalent: "")
         checkForUpdatesItem.target = self
         menu.addItem(checkForUpdatesItem)
-        
+
+        menu.addItem(NSMenuItem.separator())
+
         // Quit
         let quitItem = NSMenuItem(title: "Quit Photocopy", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-        
+
         statusItem?.menu = menu
     }
     
@@ -78,7 +87,11 @@ class MenuBarManager: ObservableObject {
         // Create a fresh settings window
         createSettingsWindow()
     }
-    
+
+    @objc private func showDebugLogs() {
+        logViewerManager.showLogViewer()
+    }
+
     private func createSettingsWindow() {
         let settingsView = SettingsView()
             .environmentObject(settingsManager)

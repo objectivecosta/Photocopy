@@ -4,7 +4,9 @@ import ServiceManagement
 import Carbon
 
 @MainActor
-class SettingsManager: ObservableObject {    
+class SettingsManager: ObservableObject {
+    private let logger = Logger(subsystem: "com.photocopy.app", category: "SettingsManager")
+    
     // MARK: - Published Properties
     @Published var maxHistoryItems: Int = 50 {
         didSet { if !isLoading { saveSettings() } }
@@ -209,11 +211,19 @@ class SettingsManager: ObservableObject {
     private func addToLoginItems() {
         // Use SMAppService for modern login item management
         if #available(macOS 13.0, *) {
+            // First, unregister any existing registration to ensure clean state
+            // This fixes cases where SMAppService shows as "enabled" but launchd isn't actually configured
+            do {
+                try SMAppService.mainApp.unregister()
+            } catch {
+                logger.warning("⚠️ Could not unregister existing login item (may not exist): \(error.localizedDescription)")
+            }
+
             do {
                 try SMAppService.mainApp.register()
-                print("✅ Successfully registered app for auto-launch")
+                logger.info("✅ Successfully registered app for auto-launch")
             } catch {
-                print("❌ Failed to register for auto-launch: \(error)")
+                logger.error("❌ Failed to register for auto-launch: \(error.localizedDescription)")
                 // Fallback to AppleScript
                 fallbackAddToLoginItems()
             }
@@ -221,21 +231,58 @@ class SettingsManager: ObservableObject {
             fallbackAddToLoginItems()
         }
     }
-    
+
+    func isRegisteredForAutoLaunch() -> Bool {
+        if #available(macOS 13.0, *) {
+            let status = SMAppService.mainApp.status
+            let isEnabled = status == .enabled
+            logger.info("🔍 SMAppService status: \(status.rawValue) (enabled: \(isEnabled))")
+            return isEnabled
+        } else {
+            // For older macOS, check using AppleScript
+            return fallbackCheckLoginItems()
+        }
+    }
+
     private func removeFromLoginItems() {
         // Use SMAppService for modern login item management
         if #available(macOS 13.0, *) {
             do {
                 try SMAppService.mainApp.unregister()
-                print("✅ Successfully unregistered app from auto-launch")
+                logger.info("✅ Successfully unregistered app from auto-launch")
             } catch {
-                print("❌ Failed to unregister from auto-launch: \(error)")
+                logger.error("❌ Failed to unregister from auto-launch: \(error.localizedDescription)")
                 // Fallback to AppleScript
                 fallbackRemoveFromLoginItems()
             }
         } else {
             fallbackRemoveFromLoginItems()
         }
+    }
+
+    private func fallbackCheckLoginItems() -> Bool {
+        let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "Photocopy"
+        let script = """
+        tell application "System Events"
+            set loginItems to login item 1
+            repeat with anItem in loginItems
+                if name of anItem is "\(appName)" then
+                    return true
+                end if
+            end repeat
+            return false
+        end tell
+        """
+
+        if let appleScript = NSAppleScript(source: script) {
+            var error: NSDictionary?
+            let result = appleScript.executeAndReturnError(&error)
+            if error != nil {
+                return false
+            }
+            return result.booleanValue
+        }
+        return false
     }
     
     private func fallbackAddToLoginItems() {

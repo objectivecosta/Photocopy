@@ -8,7 +8,6 @@
 import Foundation
 import SwiftUI
 import AppKit
-import os.log
 
 @MainActor
 class OverlayWindowManager: NSObject, ObservableObject {
@@ -50,23 +49,24 @@ class OverlayWindowManager: NSObject, ObservableObject {
         // Capture the currently active app before showing overlay
         previouslyActiveApp = NSWorkspace.shared.frontmostApplication
         logger.info("🖼️ Captured previously active app: \(self.previouslyActiveApp?.localizedName ?? "Unknown")")
-        
+
         createOverlayWindow()
         setupWindowPosition()
         animateIn()
-        
+
         isVisible = true
         logger.info("🖼️ Overlay window shown")
     }
-    
+
     func hideOverlay() {
         guard isVisible else { return }
-        
+
         animateOut { [weak self] in
-            self?.destroyOverlayWindow()
-            self?.isVisible = false
-            self?.onWindowHidden?()
-            self?.logger.info("🖼️ Overlay window hidden")
+            guard let self = self else { return }
+            self.destroyOverlayWindow()
+            self.isVisible = false
+            self.onWindowHidden?()
+            self.logger.info("🖼️ Overlay window hidden")
         }
     }
     

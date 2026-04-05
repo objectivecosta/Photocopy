@@ -442,40 +442,7 @@ struct SettingsView: View {
     }
     
     private func setAutoLaunch(enabled: Bool) {
-        // This will be implemented to set up auto-launch
-        let bundleIdentifier = Bundle.main.bundleIdentifier ?? "me.rafaelcosta.Photocopy"
-        
-        if enabled {
-            // Add to login items
-            let script = """
-            tell application "System Events"
-                make login item at end with properties {path:"\(Bundle.main.bundlePath)", hidden:false}
-            end tell
-            """
-            
-            if let appleScript = NSAppleScript(source: script) {
-                var error: NSDictionary?
-                appleScript.executeAndReturnError(&error)
-                if let error = error {
-                    print("Error adding login item: \(error)")
-                }
-            }
-        } else {
-            // Remove from login items
-            let script = """
-            tell application "System Events"
-                delete login item "\(Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "Photocopy")"
-            end tell
-            """
-            
-            if let appleScript = NSAppleScript(source: script) {
-                var error: NSDictionary?
-                appleScript.executeAndReturnError(&error)
-                if let error = error {
-                    print("Error removing login item: \(error)")
-                }
-            }
-        }
+        settingsManager.setAutoLaunch(enabled: enabled)
     }
 }
 

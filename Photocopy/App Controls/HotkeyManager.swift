@@ -8,7 +8,6 @@
 import Foundation
 import Carbon
 import AppKit
-import os.log
 import Combine
 
 @MainActor
@@ -74,7 +73,7 @@ class HotkeyManager: ObservableObject {
             logger.error("❌ Failed to install event handler: \(status)")
             return
         }
-        
+
         // Get current modifier flags from settings
         let currentModifierFlags = settingsManager.hotkeyModifier.carbonModifierFlags
 
