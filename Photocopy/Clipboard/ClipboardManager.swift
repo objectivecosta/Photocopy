@@ -315,8 +315,9 @@ class ClipboardManager: ObservableObject {
 
         let contentHash = ClipboardItem.generateContentHash(for: .text(text))
 
-        // Check for duplicates
+        // Check for duplicates - move to front if already exists
         if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+            upsertClipboardItem(existingItem, modelContext: modelContext)
             return
         }
 
@@ -394,9 +395,10 @@ class ClipboardManager: ObservableObject {
 
         let contentHash = ClipboardItem.generateContentHash(for: .imageInMemory(data, thumbnail: nil))
 
-        // Check for duplicates
-        if clipboardItems.first?.contentHash == contentHash {
-            print("📋 Duplicate image detected, skipping")
+        // Check for duplicates - move to front if already exists
+        if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+            print("📋 Duplicate image detected, moving to front")
+            upsertClipboardItem(existingItem, modelContext: modelContext)
             return
         }
 
@@ -491,10 +493,11 @@ class ClipboardManager: ObservableObject {
         
         let contentHash = ClipboardItem.generateContentHash(for: .file(fileURLs.first!))
         print("📋 Generated content hash: \(contentHash)")
-        
-        // Check for duplicates
-        if clipboardItems.first?.contentHash == contentHash {
-            print("📋 Duplicate file detected, skipping")
+
+        // Check for duplicates - move to front if already exists
+        if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+            print("📋 Duplicate file detected, moving to front")
+            upsertClipboardItem(existingItem, modelContext: modelContext)
             return
         }
 
@@ -555,9 +558,10 @@ class ClipboardManager: ObservableObject {
                 let hashString = "\(url.path)_\(modificationDate.timeIntervalSince1970)"
                 let contentHash = ClipboardItem.generateContentHash(for: .text(hashString))
 
-                // Check for duplicates
-                if clipboardItems.first?.contentHash == contentHash {
-                    print("📋 Duplicate image file detected, skipping")
+                // Check for duplicates - move to front if already exists
+                if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+                    print("📋 Duplicate image file detected, moving to front")
+                    upsertClipboardItem(existingItem, modelContext: modelContext)
                     return
                 }
 
@@ -587,12 +591,13 @@ class ClipboardManager: ObservableObject {
                 // Use a simpler hash based on file path
                 let contentHash = ClipboardItem.generateContentHash(for: .text(url.path))
                 
-                // Check for duplicates
-                if clipboardItems.first?.contentHash == contentHash {
-                    print("📋 Duplicate image file detected, skipping")
+                // Check for duplicates - move to front if already exists
+                if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+                    print("📋 Duplicate image file detected, moving to front")
+                    upsertClipboardItem(existingItem, modelContext: modelContext)
                     return
                 }
-                
+
                 // Continue with processing even without file attributes
                 let fileName = url.lastPathComponent
                 let fileExtension = url.pathExtension.uppercased()
@@ -628,8 +633,11 @@ class ClipboardManager: ObservableObject {
 
         let contentHash = ClipboardItem.generateContentHash(for: .richText(rtfData))
 
-        // Check for duplicates
-        if clipboardItems.first?.contentHash == contentHash { return }
+        // Check for duplicates - move to front if already exists
+        if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+            upsertClipboardItem(existingItem, modelContext: modelContext)
+            return
+        }
 
         // Try to extract plain text for preview
         var preview = "Rich text content"
@@ -656,8 +664,11 @@ class ClipboardManager: ObservableObject {
 
         let contentHash = ClipboardItem.generateContentHash(for: .richText(htmlData))
 
-        // Check for duplicates
-        if clipboardItems.first?.contentHash == contentHash { return }
+        // Check for duplicates - move to front if already exists
+        if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+            upsertClipboardItem(existingItem, modelContext: modelContext)
+            return
+        }
 
         // Try to extract plain text for preview
         var preview = "HTML content"
@@ -693,9 +704,12 @@ class ClipboardManager: ObservableObject {
         }
         
         let contentHash = ClipboardItem.generateContentHash(for: .imageInMemory(data, thumbnail: nil))
-        
-        // Check for duplicates
-        if clipboardItems.first?.contentHash == contentHash { return }
+
+        // Check for duplicates - move to front if already exists
+        if let existingItem = clipboardItems.first(where: { $0.contentHash == contentHash }) {
+            upsertClipboardItem(existingItem, modelContext: modelContext)
+            return
+        }
         
         let typeString = firstType.rawValue
         let preview = "Unknown content type: \(typeString) (\(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .binary)))"
@@ -710,17 +724,21 @@ class ClipboardManager: ObservableObject {
     private func upsertClipboardItem(_ item: ClipboardItem, modelContext: ModelContext) {
         print("📋 ➕ upsertClipboardItem called for: \(item.contentType.rawValue) - \(item.shortPreview)")
 
+        let isNewItem: Bool
+
         if let existingIndex = clipboardItems.firstIndex(where: { $0.contentHash == item.contentHash }) {
             let existingItem = clipboardItems.remove(at: existingIndex)
             existingItem.timestamp = Date()
             clipboardItems.insert(existingItem, at: 0)
+            isNewItem = false
             print("📋 Item updated in the clipboardItems array. Total items: \(clipboardItems.count)")
         } else {
             // Insert at the beginning (most recent first)
             clipboardItems.insert(item, at: 0)
+            isNewItem = true
             print("📋 Item inserted into clipboardItems array. Total items: \(clipboardItems.count)")
         }
-        
+
         // Limit the number of items based on settings
         switch settingsManager.retentionStrategy {
         case .count:
@@ -730,19 +748,21 @@ class ClipboardManager: ObservableObject {
             // but we might want a safety cap (e.g., 3072) to prevent memory issues
             enforceItemLimit(1024 * 3)
         }
-        
+
         // Update filtered items
         filterItems()
-        
+
         // Save to persistent storage
-        modelContext.insert(item)
-        
+        if isNewItem {
+            modelContext.insert(item)
+        }
+
         do {
             try modelContext.save()
         } catch {
             print("❌ Failed to save clipboard item: \(error)")
         }
-        
+
         print("📋 Added new clipboard item: \(item.shortPreview)")
     }
     
