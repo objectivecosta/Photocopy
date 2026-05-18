@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct PhotocopyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     private var appController: AppController = AppController()
     
     // Logging
@@ -55,7 +56,7 @@ struct PhotocopyApp: App {
             EmptyView()
                 .frame(width: 0, height: 0)
                 .onAppear {
-                    setupApp()
+                    setupIfNeeded()
                     // Hide the main window immediately
                     DispatchQueue.main.async {
                         NSApp.windows.first?.close()
@@ -70,8 +71,19 @@ struct PhotocopyApp: App {
         .environmentObject(appController.menuBarManager)
         .environmentObject(appController.overlayManager)
         .environmentObject(appController.settingsManager)
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
+                setupIfNeeded()
+            }
+        }
     }
-    
+
+    private func setupIfNeeded() {
+        guard !appController.isSetup else { return }
+        appController.markAsSetup()
+        setupApp()
+    }
+
     private func setupApp() {
         // Configure clipboard manager with model context
         let modelContext = sharedModelContainer.mainContext

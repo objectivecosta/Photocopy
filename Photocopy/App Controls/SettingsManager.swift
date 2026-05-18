@@ -200,14 +200,14 @@ class SettingsManager: ObservableObject {
     func setAutoLaunch(enabled: Bool) {
         autoLaunchOnStartup = enabled
         saveSettings()
-        
+
         if enabled {
             addToLoginItems()
         } else {
             removeFromLoginItems()
         }
     }
-    
+
     private func addToLoginItems() {
         // Use SMAppService for modern login item management
         if #available(macOS 13.0, *) {
@@ -239,20 +239,17 @@ class SettingsManager: ObservableObject {
             logger.info("🔍 SMAppService status: \(status.rawValue) (enabled: \(isEnabled))")
             return isEnabled
         } else {
-            // For older macOS, check using AppleScript
             return fallbackCheckLoginItems()
         }
     }
 
     private func removeFromLoginItems() {
-        // Use SMAppService for modern login item management
         if #available(macOS 13.0, *) {
             do {
                 try SMAppService.mainApp.unregister()
                 logger.info("✅ Successfully unregistered app from auto-launch")
             } catch {
                 logger.error("❌ Failed to unregister from auto-launch: \(error.localizedDescription)")
-                // Fallback to AppleScript
                 fallbackRemoveFromLoginItems()
             }
         } else {
@@ -264,13 +261,14 @@ class SettingsManager: ObservableObject {
         let appName = Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "Photocopy"
         let script = """
         tell application "System Events"
-            set loginItems to login item 1
-            repeat with anItem in loginItems
+            set found to false
+            repeat with anItem in login items
                 if name of anItem is "\(appName)" then
-                    return true
+                    set found to true
+                    exit repeat
                 end if
             end repeat
-            return false
+            return found
         end tell
         """
 

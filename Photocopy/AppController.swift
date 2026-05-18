@@ -17,26 +17,26 @@ final class AppController {
             NoOpImageClassifier()
         }
     }()
-    
+
     lazy var clipboardManager = {
         ClipboardManager(
             overlayWindowManager: overlayManager,
             settingsManager: settingsManager
         )
     }()
-    
+
     lazy var hotkeyManager = {
         HotkeyManager(settingsManager: settingsManager)
     }()
-    
+
     lazy var menuBarManager = {
         MenuBarManager(overlayWindowManager: overlayManager, settingsManager: settingsManager, logViewerManager: logViewerManager)
     }()
-    
+
     lazy var overlayManager = {
         OverlayWindowManager(imageClassifier: imageClassifier, settingsManager: settingsManager, clipboardManagerProvider: clipboardManagerProvider)
     }()
-    
+
     lazy var settingsManager = {
         SettingsManager()
     }()
@@ -48,6 +48,12 @@ final class AppController {
     lazy var clipboardManagerProvider: ClipboardManagerProviderImpl = {
         ClipboardManagerProviderImpl()
     }()
+
+    private(set) var isSetup = false
+
+    func markAsSetup() {
+        isSetup = true
+    }
 
     init() {
         self.clipboardManagerProvider.clipboardManager = clipboardManager
