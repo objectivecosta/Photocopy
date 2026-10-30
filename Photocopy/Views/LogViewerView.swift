@@ -36,6 +36,14 @@ struct LogViewerView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
+                Button(action: {
+                    NSWorkspace.shared.activateFileViewerSelecting([ApplicationLogger.currentLogFileURL])
+                }) {
+                    Label("Reveal in Finder", systemImage: "folder")
+                }
+                .buttonStyle(.borderless)
+                .help("Show log file in Finder")
+
                 Button(action: { applicationLogger.clear() }) {
                     Label("Clear", systemImage: "trash")
                 }
@@ -72,6 +80,33 @@ struct LogViewerView: View {
                     .padding(8)
                 }
             }
+
+            // Footer with log file path
+            Divider()
+            HStack {
+                Text(ApplicationLogger.currentLogFileURL.path)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .help(ApplicationLogger.currentLogFileURL.path)
+
+                Spacer()
+
+                Button(action: {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.declareTypes([.string], owner: nil)
+                    pasteboard.setString(ApplicationLogger.currentLogFileURL.path, forType: .string)
+                }) {
+                    Label("Copy Path", systemImage: "doc.on.doc")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderless)
+                .help("Copy log file path to clipboard")
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(nsColor: .controlBackgroundColor))
         }
         .searchable(text: $searchText, prompt: "Search logs")
         .frame(minWidth: 700, minHeight: 400)

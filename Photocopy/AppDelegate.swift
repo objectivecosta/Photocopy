@@ -3,13 +3,13 @@ import SwiftUI
 import Sparkle
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {    
+class AppDelegate: NSObject, NSApplicationDelegate {
     // Updating
     var updaterController: SPUStandardUpdaterController?
-    
+
     // Logging
     private let logger = Logger(subsystem: "com.photocopy.app", category: "AppDelegate")
-    
+
     func checkForUpdates() {
         logger.info("🔄 Checking for updates...")
 
@@ -23,14 +23,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         logger.info("🚀 App delegate: Application did finish launching")
-        // Since we're an LSUIElement app, we don't need to change activation policy
-        // The app delegate will handle preventing termination
 
         updaterController = SPUStandardUpdaterController(
             startingUpdater: true,
             updaterDelegate: nil,
             userDriverDelegate: nil
         )
+
+        // Kick off app setup on the next run loop iteration so that
+        // PhotocopyApp.init() and body evaluation have completed,
+        // ensuring sharedAppController and sharedModelContainer are set.
+        DispatchQueue.main.async {
+            PhotocopyApp.runAppSetup()
+
+            // Wire "Check for Updates" menu item to the updater
+            PhotocopyApp.sharedAppController?.menuBarManager.checkForUpdatesClosure = { [weak self] in
+                self?.checkForUpdates()
+            }
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -44,4 +54,4 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         logger.info("🛑 App delegate: Application should terminate called")
         return .terminateNow
     }
-} 
+}

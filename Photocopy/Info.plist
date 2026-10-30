@@ -48,7 +48,7 @@
 		</dict>
 	</dict>
 	<key>SUFeedURL</key>
-	<string>https://updates.cos.tax/me.rafaelcosta.Photocopy/appcast.xml</string>
+	<string>https://updates.rafaelcosta.me/me.rafaelcosta.Photocopy/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>ZKznw0lWFNV/VytN/pXeKL8QkKyodJTrXeHFsAmpSoU=</string>
 </dict>
